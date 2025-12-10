@@ -3,6 +3,7 @@ const { body, validationResult } = require('express-validator');
 const User = require('../models/User');
 const { authenticate, isSystemAdmin } = require('../middleware/auth');
 const { generateTempPassword, sendEmail, welcomeEmailBody } = require('../utils/helpers');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -12,7 +13,7 @@ router.get('/', authenticate, isSystemAdmin, async (req, res) => {
     const users = await User.find().sort({ createdAt: -1 });
     res.json({ users });
   } catch (error) {
-    console.error('Get users error:', error);
+    logger.logError(error, { context: 'users.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching users' });
   }
 });
@@ -34,7 +35,7 @@ router.get('/by-role/:role', authenticate, async (req, res) => {
     const users = await User.find(query).select('firstName lastName email role');
     res.json({ users });
   } catch (error) {
-    console.error('Get users by role error:', error);
+    logger.logError(error, { context: 'users.getByRole', role: req.params.role, userId: req.user._id });
     res.status(500).json({ error: 'Error fetching users' });
   }
 });
@@ -48,7 +49,7 @@ router.get('/:id', authenticate, async (req, res) => {
     }
     res.json({ user });
   } catch (error) {
-    console.error('Get user error:', error);
+    logger.logError(error, { context: 'users.getOne', targetUserId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error fetching user' });
   }
 });
@@ -101,7 +102,7 @@ router.post('/', authenticate, isSystemAdmin, [
         welcomeEmailBody(firstName, tempPassword)
       );
     } catch (emailError) {
-      console.error('Failed to send welcome email:', emailError);
+      logger.logError(emailError, { context: 'users.create.sendEmail', email, userId: req.user._id });
       // Continue even if email fails
     }
 
@@ -110,7 +111,7 @@ router.post('/', authenticate, isSystemAdmin, [
       user
     });
   } catch (error) {
-    console.error('Create user error:', error);
+    logger.logError(error, { context: 'users.create', email: req.body.email, userId: req.user._id });
     res.status(500).json({ error: 'Error creating user' });
   }
 });
@@ -149,7 +150,7 @@ router.put('/:id', authenticate, isSystemAdmin, [
 
     res.json({ message: 'User updated successfully', user });
   } catch (error) {
-    console.error('Update user error:', error);
+    logger.logError(error, { context: 'users.update', targetUserId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error updating user' });
   }
 });
@@ -165,7 +166,7 @@ router.delete('/:id', authenticate, isSystemAdmin, async (req, res) => {
 
     res.json({ message: 'User deleted successfully' });
   } catch (error) {
-    console.error('Delete user error:', error);
+    logger.logError(error, { context: 'users.delete', targetUserId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error deleting user' });
   }
 });

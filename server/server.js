@@ -6,6 +6,7 @@ const session = require('express-session');
 const MongoStore = require('connect-mongo');
 const rateLimit = require('express-rate-limit');
 const passport = require('./config/passport');
+const logger = require('./utils/logger');
 
 // Load environment variables
 dotenv.config();
@@ -41,8 +42,24 @@ app.use('/api/', limiter);
 
 // Database connection
 mongoose.connect(process.env.MONGODB_URI)
-  .then(() => console.log('MongoDB connected successfully'))
-  .catch((err) => console.error('MongoDB connection error:', err));
+  .then(() => {
+    logger.logDatabase('connect', 'MongoDB', true);
+    logger.info('MongoDB connected successfully');
+  })
+  .catch((err) => {
+    logger.logDatabase('connect', 'MongoDB', false, { error: err.message });
+    logger.error('MongoDB connection error:', err);
+    process.exit(1);
+  });
+
+// MongoDB connection event handlers
+mongoose.connection.on('error', (err) => {
+  logger.logError(err, { context: 'mongoose.connection' });
+});
+
+mongoose.connection.on('disconnected', () => {
+  logger.warn('MongoDB disconnected');
+});
 
 // Session configuration (required for Passport)
 app.use(session({
@@ -72,6 +89,16 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/prompts', promptRoutes);
 app.use('/api/stats', statsRoutes);
 
+// Request logging middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  res.on('finish', () => {
+    const duration = Date.now() - start;
+    logger.logRequest(req, res.statusCode, duration);
+  });
+  next();
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', message: 'Server is running' });
@@ -79,7 +106,13 @@ app.get('/api/health', (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  logger.logError(err, {
+    context: 'express.errorHandler',
+    url: req.originalUrl,
+    method: req.method,
+    ip: req.ip,
+    userId: req.user?._id
+  });
 
   // Multer file size error
   if (err.code === 'LIMIT_FILE_SIZE') {
@@ -91,13 +124,37 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: err.message });
   }
 
+  // JWT errors
+  if (err.name === 'JsonWebTokenError') {
+    return res.status(401).json({ error: 'Invalid token' });
+  }
+
+  if (err.name === 'TokenExpiredError') {
+    return res.status(401).json({ error: 'Token expired' });
+  }
+
+  // Mongoose validation errors
+  if (err.name === 'ValidationError') {
+    const messages = Object.values(err.errors).map(e => e.message);
+    return res.status(400).json({ error: messages.join(', ') });
+  }
+
+  // Mongoose duplicate key error
+  if (err.code === 11000) {
+    const field = Object.keys(err.keyPattern)[0];
+    return res.status(400).json({ error: `${field} already exists` });
+  }
+
   res.status(500).json({ error: 'Something went wrong!' });
 });
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`, {
+    environment: process.env.NODE_ENV || 'development',
+    port: PORT
+  });
 });
 
 module.exports = app;

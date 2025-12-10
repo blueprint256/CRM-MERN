@@ -2,6 +2,7 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const Prompt = require('../models/Prompt');
 const { authenticate, isSystemAdmin } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -11,7 +12,7 @@ router.get('/', authenticate, async (req, res) => {
     const prompt = await Prompt.findOne();
     res.json({ prompt: prompt?.prompt || '' });
   } catch (error) {
-    console.error('Get prompt error:', error);
+    logger.logError(error, { context: 'prompts.get', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching prompt' });
   }
 });
@@ -42,7 +43,7 @@ router.put('/', authenticate, isSystemAdmin, [
       prompt: promptDoc.prompt
     });
   } catch (error) {
-    console.error('Update prompt error:', error);
+    logger.logError(error, { context: 'prompts.update', userId: req.user._id });
     res.status(500).json({ error: 'Error updating prompt' });
   }
 });

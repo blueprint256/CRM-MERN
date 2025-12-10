@@ -6,6 +6,7 @@ const Prompt = require('../models/Prompt');
 const { authenticate, authorize } = require('../middleware/auth');
 const { sanitizeContent, generateSlogan } = require('../utils/helpers');
 const { uploadProjectImage, deleteFromS3, getKeyFromUrl } = require('../config/s3');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -69,7 +70,7 @@ router.get('/', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get projects error:', error);
+    logger.logError(error, { context: 'projects.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching projects' });
   }
 });
@@ -111,7 +112,7 @@ router.get('/calendar', authenticate, async (req, res) => {
 
     res.json({ events: eventDict });
   } catch (error) {
-    console.error('Get calendar events error:', error);
+    logger.logError(error, { context: 'projects.calendar', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching calendar events' });
   }
 });
@@ -131,7 +132,7 @@ router.get('/:id', authenticate, async (req, res) => {
 
     res.json({ project });
   } catch (error) {
-    console.error('Get project error:', error);
+    logger.logError(error, { context: 'projects.getOne', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error fetching project' });
   }
 });
@@ -207,7 +208,7 @@ router.post('/', authenticate, [
       project: populatedProject
     });
   } catch (error) {
-    console.error('Create project error:', error);
+    logger.logError(error, { context: 'projects.create', campaignName: req.body.campaignName, userId: req.user._id });
     res.status(500).json({ error: 'Error creating project' });
   }
 });
@@ -242,7 +243,7 @@ router.post('/:id/upload-image', authenticate, uploadProjectImage.single('image'
       imageUrl: req.file.location
     });
   } catch (error) {
-    console.error('Upload image error:', error);
+    logger.logError(error, { context: 'projects.uploadImage', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error uploading image' });
   }
 });
@@ -319,7 +320,7 @@ router.put('/:id', authenticate, async (req, res) => {
       project: updatedProject
     });
   } catch (error) {
-    console.error('Update project error:', error);
+    logger.logError(error, { context: 'projects.update', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error updating project' });
   }
 });
@@ -351,7 +352,7 @@ router.post('/:id/generate-slogan', authenticate, async (req, res) => {
       generatedSlogan
     });
   } catch (error) {
-    console.error('Generate slogan error:', error);
+    logger.logError(error, { context: 'projects.generateSlogan', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error generating slogan' });
   }
 });
@@ -380,7 +381,7 @@ router.delete('/:id', authenticate, authorize('system'), async (req, res) => {
 
     res.json({ message: 'Project deleted successfully' });
   } catch (error) {
-    console.error('Delete project error:', error);
+    logger.logError(error, { context: 'projects.delete', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error deleting project' });
   }
 });
@@ -394,7 +395,7 @@ router.get('/:id/history', authenticate, async (req, res) => {
 
     res.json({ history });
   } catch (error) {
-    console.error('Get project history error:', error);
+    logger.logError(error, { context: 'projects.history', projectId: req.params.id, userId: req.user._id });
     res.status(500).json({ error: 'Error fetching project history' });
   }
 });

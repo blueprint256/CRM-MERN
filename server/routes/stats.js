@@ -2,6 +2,7 @@ const express = require('express');
 const Project = require('../models/Project');
 const User = require('../models/User');
 const { authenticate } = require('../middleware/auth');
+const logger = require('../utils/logger');
 
 const router = express.Router();
 
@@ -75,7 +76,7 @@ router.get('/', authenticate, async (req, res) => {
       recentProjects
     });
   } catch (error) {
-    console.error('Get stats error:', error);
+    logger.logError(error, { context: 'stats.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching statistics' });
   }
 });
@@ -113,7 +114,7 @@ router.get('/user', authenticate, async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Get user stats error:', error);
+    logger.logError(error, { context: 'stats.getUser', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching user statistics' });
   }
 });
