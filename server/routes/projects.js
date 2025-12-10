@@ -1,35 +1,13 @@
 const express = require('express');
 const { body, query, validationResult } = require('express-validator');
-const multer = require('multer');
-const cloudinary = require('cloudinary').v2;
 const Project = require('../models/Project');
 const ProjectHistory = require('../models/ProjectHistory');
 const Prompt = require('../models/Prompt');
 const { authenticate, authorize } = require('../middleware/auth');
-const { sanitizeContent, generateSlogan, validateFileSize } = require('../utils/helpers');
+const { sanitizeContent, generateSlogan } = require('../utils/helpers');
+const { uploadProjectImage, deleteFromS3, getKeyFromUrl } = require('../config/s3');
 
 const router = express.Router();
-
-// Configure multer for file uploads
-const storage = multer.memoryStorage();
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
-  fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
-      cb(null, true);
-    } else {
-      cb(new Error('Only image files are allowed'), false);
-    }
-  }
-});
-
-// Configure cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUD_NAME,
-  api_key: process.env.CLOUD_API_KEY,
-  api_secret: process.env.CLOUD_API_SECRET
-});
 
 // Helper to get projects based on user role
 const getProjectsQuery = (user, status = null) => {
@@ -234,8 +212,8 @@ router.post('/', authenticate, [
   }
 });
 
-// POST /api/projects/:id/upload-image - Upload project image
-router.post('/:id/upload-image', authenticate, upload.single('image'), async (req, res) => {
+// POST /api/projects/:id/upload-image - Upload project image to S3
+router.post('/:id/upload-image', authenticate, uploadProjectImage.single('image'), async (req, res) => {
   try {
     const project = await Project.findById(req.params.id);
 
@@ -247,24 +225,21 @@ router.post('/:id/upload-image', authenticate, upload.single('image'), async (re
       return res.status(400).json({ error: 'No image file provided' });
     }
 
-    // Upload to cloudinary
-    const result = await new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        { folder: 'crm-projects' },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result);
-        }
-      );
-      uploadStream.end(req.file.buffer);
-    });
+    // Delete old image from S3 if exists
+    if (project.imgDesign) {
+      const oldKey = getKeyFromUrl(project.imgDesign);
+      if (oldKey) {
+        await deleteFromS3(oldKey);
+      }
+    }
 
-    project.imgDesign = result.secure_url;
+    // Update project with new S3 URL
+    project.imgDesign = req.file.location;
     await project.save();
 
     res.json({
       message: 'Image uploaded successfully',
-      imageUrl: result.secure_url
+      imageUrl: req.file.location
     });
   } catch (error) {
     console.error('Upload image error:', error);
@@ -384,11 +359,21 @@ router.post('/:id/generate-slogan', authenticate, async (req, res) => {
 // DELETE /api/projects/:id - Delete project (system admin only)
 router.delete('/:id', authenticate, authorize('system'), async (req, res) => {
   try {
-    const project = await Project.findByIdAndDelete(req.params.id);
+    const project = await Project.findById(req.params.id);
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
+
+    // Delete image from S3 if exists
+    if (project.imgDesign) {
+      const imageKey = getKeyFromUrl(project.imgDesign);
+      if (imageKey) {
+        await deleteFromS3(imageKey);
+      }
+    }
+
+    await Project.findByIdAndDelete(req.params.id);
 
     // Delete related history
     await ProjectHistory.deleteMany({ project: req.params.id });

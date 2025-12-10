@@ -55,6 +55,21 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Login with token (for OAuth callback)
+  const loginWithToken = async (token) => {
+    try {
+      setError(null);
+      localStorage.setItem('token', token);
+      await fetchUser();
+      return { success: true };
+    } catch (error) {
+      localStorage.removeItem('token');
+      const message = error.response?.data?.error || 'Authentication failed';
+      setError(message);
+      throw new Error(message);
+    }
+  };
+
   const signup = async (userData) => {
     try {
       setError(null);
@@ -87,9 +102,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout');
+    } catch (error) {
+      // Ignore logout errors
+    } finally {
+      localStorage.removeItem('token');
+      setUser(null);
+    }
   };
 
   const value = {
@@ -97,6 +118,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     error,
     login,
+    loginWithToken,
     signup,
     logout,
     changePassword,

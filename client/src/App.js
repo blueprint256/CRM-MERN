@@ -10,6 +10,7 @@ import ProtectedRoute from './components/layout/ProtectedRoute';
 import Login from './pages/auth/Login';
 import Signup from './pages/auth/Signup';
 import ChangePassword from './pages/auth/ChangePassword';
+import OAuthCallback from './pages/auth/OAuthCallback';
 
 // Main pages
 import Dashboard from './pages/Dashboard';
@@ -43,6 +44,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/change-password" element={<ChangePassword />} />
+        <Route path="/oauth/callback" element={<OAuthCallback />} />
         <Route path="/product/:id" element={<Product />} />
 
         {/* Protected routes */}

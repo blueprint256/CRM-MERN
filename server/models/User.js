@@ -40,14 +40,35 @@ const userSchema = new mongoose.Schema({
   createPassword: {
     type: Boolean,
     default: false
+  },
+  // OAuth fields
+  googleId: {
+    type: String,
+    unique: true,
+    sparse: true,
+    index: true
+  },
+  authProvider: {
+    type: String,
+    enum: ['local', 'google'],
+    default: 'local'
+  },
+  profilePicture: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
 });
 
-// Hash password before saving
+// Hash password before saving (skip for OAuth users)
 userSchema.pre('save', async function(next) {
   if (!this.isModified('passwordHash')) return next();
+
+  // Skip hashing for OAuth placeholder passwords
+  if (this.passwordHash === 'oauth_no_password') {
+    return next();
+  }
 
   try {
     const salt = await bcrypt.genSalt(10);
@@ -60,6 +81,10 @@ userSchema.pre('save', async function(next) {
 
 // Method to check password
 userSchema.methods.checkPassword = async function(password) {
+  // OAuth users can't use password login directly
+  if (this.authProvider !== 'local' && this.passwordHash === 'oauth_no_password') {
+    return false;
+  }
   return bcrypt.compare(password, this.passwordHash);
 };
 
@@ -67,6 +92,12 @@ userSchema.methods.checkPassword = async function(password) {
 userSchema.methods.setPassword = async function(password) {
   const salt = await bcrypt.genSalt(10);
   this.passwordHash = await bcrypt.hash(password, salt);
+  this.authProvider = 'local'; // When setting password, switch to local auth
+};
+
+// Check if user can use password login
+userSchema.methods.canUsePasswordLogin = function() {
+  return this.authProvider === 'local' || this.passwordHash !== 'oauth_no_password';
 };
 
 // Virtual for full name
