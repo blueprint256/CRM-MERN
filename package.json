@@ -1,0 +1,22 @@
+{
+  "name": "crm-mern",
+  "version": "1.0.0",
+  "description": "Full-stack CRM application built with MERN stack",
+  "main": "server/server.js",
+  "scripts": {
+    "start": "cd server && npm start",
+    "dev": "cd server && npm run dev",
+    "client": "cd client && npm start",
+    "install-all": "npm install && cd server && npm install && cd ../client && npm install"
+  },
+  "keywords": [
+    "crm",
+    "mern",
+    "mongodb",
+    "express",
+    "react",
+    "nodejs"
+  ],
+  "author": "Blueprint Marketing",
+  "license": "MIT"
+}
