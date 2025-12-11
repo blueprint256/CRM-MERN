@@ -378,13 +378,30 @@ router.post('/projects/:projectId/save', authenticate, ensureCanvaToken, [
 
     const newImageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
 
-    // Delete old image from S3 if exists
+    // Save current image to history before replacing (keep last 10 versions)
     if (project.imgDesign) {
-      const oldKey = getKeyFromUrl(project.imgDesign);
-      if (oldKey) {
-        await deleteFromS3(oldKey).catch(err => {
-          logger.warn('Failed to delete old image from S3', { key: oldKey, error: err.message });
-        });
+      if (!project.imageHistory) {
+        project.imageHistory = [];
+      }
+      project.imageHistory.unshift({
+        url: project.imgDesign,
+        source: project.canvaDesignId ? 'canva' : 'upload',
+        canvaDesignId: project.canvaDesignId || null,
+        createdAt: project.lastCanvaEdit || project.updatedAt,
+        createdBy: req.user._id
+      });
+      // Keep only last 10 versions
+      if (project.imageHistory.length > 10) {
+        const removedImages = project.imageHistory.splice(10);
+        // Optionally delete old images from S3
+        for (const img of removedImages) {
+          const oldKey = getKeyFromUrl(img.url);
+          if (oldKey) {
+            deleteFromS3(oldKey).catch(err => {
+              logger.warn('Failed to delete old history image from S3', { key: oldKey });
+            });
+          }
+        }
       }
     }
 

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Alert from '../components/common/Alert';
+import { ProjectImageManager } from '../components/canva';
 
 const ProjectDetail = () => {
   const { id } = useParams();
@@ -253,21 +254,17 @@ const ProjectDetail = () => {
             </div>
           </div>
 
-          {project.imgDesign && (
-            <div className="card mb-4">
-              <div className="card-header">
-                <h5 className="mb-0">Design Image</h5>
-              </div>
-              <div className="card-body text-center">
-                <img
-                  src={project.imgDesign}
-                  alt="Project Design"
-                  className="img-fluid rounded"
-                  style={{ maxHeight: '400px' }}
-                />
-              </div>
-            </div>
-          )}
+          {/* Canva Image Manager */}
+          <div className="mb-4">
+            <ProjectImageManager
+              project={project}
+              onImageUpdated={(newImageUrl) => {
+                setProject({ ...project, imgDesign: newImageUrl });
+                setSuccess('Image updated successfully');
+              }}
+              onProjectUpdate={fetchProject}
+            />
+          </div>
         </div>
 
         <div className="col-lg-4">

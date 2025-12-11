@@ -69,7 +69,25 @@ const projectSchema = new mongoose.Schema({
   lastCanvaEdit: {
     type: Date,
     default: null
-  }
+  },
+  // Image version history
+  imageHistory: [{
+    url: String,
+    source: {
+      type: String,
+      enum: ['upload', 'canva'],
+      default: 'upload'
+    },
+    canvaDesignId: String,
+    createdAt: {
+      type: Date,
+      default: Date.now
+    },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    }
+  }]
 }, {
   timestamps: true
 });
