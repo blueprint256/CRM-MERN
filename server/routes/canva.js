@@ -76,16 +76,24 @@ router.get('/auth', authenticate, async (req, res) => {
 // GET /api/canva/callback - Handle Canva OAuth callback
 router.get('/callback', async (req, res) => {
   try {
-    const { code, state, error: oauthError, error_description: errorDescription } = req.query;
+    const { code, state, error: oauthError, error_description: errorDescription, correlation_jwt } = req.query;
 
     // Log all callback parameters for debugging
-    logger.info('Canva OAuth callback received', {
+    logger.info('Canva callback received', {
       hasCode: !!code,
       hasState: !!state,
+      hasCorrelationJwt: !!correlation_jwt,
       error: oauthError || null,
       errorDescription: errorDescription || null,
       allParams: Object.keys(req.query)
     });
+
+    // Handle return navigation from Canva editor (not OAuth)
+    if (correlation_jwt && !code && !state) {
+      logger.info('Canva return navigation received', { correlationJwt: correlation_jwt.substring(0, 20) + '...' });
+      // Redirect to the project page or settings - user finished editing
+      return res.redirect(`${process.env.CLIENT_URL}/projects?canva_return=true`);
+    }
 
     if (oauthError) {
       logger.warn('Canva OAuth error', {
