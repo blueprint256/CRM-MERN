@@ -3,7 +3,7 @@ const logger = require('../utils/logger');
 
 const CANVA_API_BASE = 'https://api.canva.com/rest/v1';
 const CANVA_AUTH_URL = 'https://www.canva.com/api/oauth/authorize';
-const CANVA_TOKEN_URL = 'https://www.canva.com/api/oauth/token';
+const CANVA_TOKEN_URL = 'https://api.canva.com/rest/v1/oauth/token';
 
 // Required scopes for full functionality
 const CANVA_SCOPES = [
@@ -82,6 +82,11 @@ const exchangeCodeForTokens = async (code, codeVerifier) => {
       `${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`
     ).toString('base64');
 
+    logger.info('Exchanging code for tokens', {
+      tokenUrl: CANVA_TOKEN_URL,
+      redirectUri: process.env.CANVA_REDIRECT_URI
+    });
+
     const response = await fetch(CANVA_TOKEN_URL, {
       method: 'POST',
       headers: {
@@ -96,15 +101,35 @@ const exchangeCodeForTokens = async (code, codeVerifier) => {
       })
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      logger.error('Canva token exchange failed', { error: errorData });
-      throw new Error(errorData.error_description || 'Token exchange failed');
+    // Get response as text first to handle non-JSON responses
+    const responseText = await response.text();
+
+    logger.debug('Token exchange response', {
+      status: response.status,
+      contentType: response.headers.get('content-type'),
+      bodyPreview: responseText.substring(0, 200)
+    });
+
+    // Try to parse as JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (parseError) {
+      logger.error('Canva token response is not JSON', {
+        status: response.status,
+        contentType: response.headers.get('content-type'),
+        body: responseText.substring(0, 500)
+      });
+      throw new Error(`Invalid response from Canva: ${responseText.substring(0, 100)}`);
     }
 
-    const tokens = await response.json();
+    if (!response.ok) {
+      logger.error('Canva token exchange failed', { error: data });
+      throw new Error(data.error_description || data.error || 'Token exchange failed');
+    }
+
     logger.info('Canva tokens obtained successfully');
-    return tokens;
+    return data;
   } catch (error) {
     logger.logError(error, { context: 'canva.exchangeCodeForTokens' });
     throw error;
