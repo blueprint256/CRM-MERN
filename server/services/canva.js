@@ -78,37 +78,68 @@ const buildAuthorizationUrl = (codeChallenge, state) => {
  */
 const exchangeCodeForTokens = async (code, codeVerifier) => {
   try {
+    // Validate credentials are present
+    if (!process.env.CANVA_CLIENT_ID || !process.env.CANVA_CLIENT_SECRET) {
+      throw new Error('CANVA_CLIENT_ID or CANVA_CLIENT_SECRET is not configured');
+    }
+
     const credentials = Buffer.from(
       `${process.env.CANVA_CLIENT_ID}:${process.env.CANVA_CLIENT_SECRET}`
     ).toString('base64');
 
     logger.info('Exchanging code for tokens', {
       tokenUrl: CANVA_TOKEN_URL,
-      redirectUri: process.env.CANVA_REDIRECT_URI
+      redirectUri: process.env.CANVA_REDIRECT_URI,
+      clientIdPrefix: process.env.CANVA_CLIENT_ID.substring(0, 8) + '...',
+      codePrefix: code.substring(0, 10) + '...'
     });
+
+    const requestBody = new URLSearchParams({
+      grant_type: 'authorization_code',
+      code: code,
+      code_verifier: codeVerifier,
+      redirect_uri: process.env.CANVA_REDIRECT_URI
+    });
+
+    logger.debug('Token request body', { body: requestBody.toString().substring(0, 100) + '...' });
 
     const response = await fetch(CANVA_TOKEN_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${credentials}`,
-        'Content-Type': 'application/x-www-form-urlencoded'
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
       },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code: code,
-        code_verifier: codeVerifier,
-        redirect_uri: process.env.CANVA_REDIRECT_URI
-      })
+      body: requestBody
     });
 
     // Get response as text first to handle non-JSON responses
     const responseText = await response.text();
 
-    logger.debug('Token exchange response', {
+    logger.info('Token exchange response received', {
       status: response.status,
+      statusText: response.statusText,
       contentType: response.headers.get('content-type'),
-      bodyPreview: responseText.substring(0, 200)
+      contentLength: responseText.length,
+      bodyPreview: responseText.substring(0, 300)
     });
+
+    // Check if response is HTML (error page)
+    if (responseText.trim().startsWith('<!DOCTYPE') || responseText.trim().startsWith('<html')) {
+      logger.error('Canva returned HTML instead of JSON - possible issues:', {
+        possibleCauses: [
+          '1. CANVA_CLIENT_ID is incorrect or not a valid Canva app ID',
+          '2. CANVA_CLIENT_SECRET is incorrect',
+          '3. The Canva app is not properly configured in Developer Portal',
+          '4. Network/proxy is intercepting the request'
+        ]
+      });
+      throw new Error(
+        'Canva returned an HTML page instead of JSON. ' +
+        'Please verify: 1) CANVA_CLIENT_ID and CANVA_CLIENT_SECRET are correct, ' +
+        '2) Your app is properly set up in Canva Developer Portal (https://www.canva.com/developers/)'
+      );
+    }
 
     // Try to parse as JSON
     let data;
