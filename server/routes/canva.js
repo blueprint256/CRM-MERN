@@ -12,6 +12,20 @@ const router = express.Router();
 // Store for PKCE code verifiers (in production, use Redis or similar)
 const codeVerifierStore = new Map();
 
+// Helper function to provide hints for OAuth errors
+const getOAuthErrorHint = (error) => {
+  const hints = {
+    'invalid_request': 'Check: 1) CANVA_CLIENT_ID is correct, 2) CANVA_REDIRECT_URI exactly matches Canva Developer Portal (use 127.0.0.1 not localhost), 3) All required scopes are enabled in Canva Developer Portal',
+    'invalid_client': 'The client_id or client_secret is invalid. Verify credentials in Canva Developer Portal.',
+    'invalid_grant': 'The authorization code is invalid or expired. Try again.',
+    'unauthorized_client': 'The client is not authorized for this grant type. Check Canva Developer Portal settings.',
+    'unsupported_grant_type': 'Grant type not supported. This is likely a code issue.',
+    'invalid_scope': 'One or more requested scopes are invalid or not enabled in Canva Developer Portal.',
+    'access_denied': 'User denied access or the integration is not approved.'
+  };
+  return hints[error] || 'Unknown error. Check Canva Developer Portal configuration.';
+};
+
 // GET /api/canva/status - Check if user has connected Canva
 router.get('/status', authenticate, async (req, res) => {
   try {
@@ -62,11 +76,24 @@ router.get('/auth', authenticate, async (req, res) => {
 // GET /api/canva/callback - Handle Canva OAuth callback
 router.get('/callback', async (req, res) => {
   try {
-    const { code, state, error: oauthError } = req.query;
+    const { code, state, error: oauthError, error_description: errorDescription } = req.query;
+
+    // Log all callback parameters for debugging
+    logger.info('Canva OAuth callback received', {
+      hasCode: !!code,
+      hasState: !!state,
+      error: oauthError || null,
+      errorDescription: errorDescription || null,
+      allParams: Object.keys(req.query)
+    });
 
     if (oauthError) {
-      logger.warn('Canva OAuth error', { error: oauthError });
-      return res.redirect(`${process.env.CLIENT_URL}/settings?canva_error=${oauthError}`);
+      logger.warn('Canva OAuth error', {
+        error: oauthError,
+        description: errorDescription,
+        hint: getOAuthErrorHint(oauthError)
+      });
+      return res.redirect(`${process.env.CLIENT_URL}/settings?canva_error=${oauthError}&error_description=${encodeURIComponent(errorDescription || '')}`);
     }
 
     if (!code || !state) {

@@ -43,6 +43,20 @@ const generateState = () => {
  * Build the Canva OAuth authorization URL
  */
 const buildAuthorizationUrl = (codeChallenge, state) => {
+  // Log configuration for debugging
+  logger.info('Building Canva authorization URL', {
+    clientId: process.env.CANVA_CLIENT_ID ? `${process.env.CANVA_CLIENT_ID.substring(0, 10)}...` : 'NOT SET',
+    redirectUri: process.env.CANVA_REDIRECT_URI || 'NOT SET',
+    scopes: CANVA_SCOPES
+  });
+
+  if (!process.env.CANVA_CLIENT_ID) {
+    throw new Error('CANVA_CLIENT_ID is not configured');
+  }
+  if (!process.env.CANVA_REDIRECT_URI) {
+    throw new Error('CANVA_REDIRECT_URI is not configured');
+  }
+
   const params = new URLSearchParams({
     response_type: 'code',
     client_id: process.env.CANVA_CLIENT_ID,
@@ -53,7 +67,10 @@ const buildAuthorizationUrl = (codeChallenge, state) => {
     state: state
   });
 
-  return `${CANVA_AUTH_URL}?${params.toString()}`;
+  const authUrl = `${CANVA_AUTH_URL}?${params.toString()}`;
+  logger.debug('Generated Canva auth URL', { authUrl });
+
+  return authUrl;
 };
 
 /**
