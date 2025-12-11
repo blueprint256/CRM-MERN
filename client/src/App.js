@@ -25,6 +25,7 @@ import Users from './pages/Users';
 import Feedback from './pages/Feedback';
 import Product from './pages/Product';
 import Settings from './pages/Settings';
+import CanvaReturn from './pages/CanvaReturn';
 
 function App() {
   const { loading } = useAuth();
@@ -70,6 +71,7 @@ function App() {
                         <Route path="/users" element={<Users />} />
                         <Route path="/feedback" element={<Feedback />} />
                         <Route path="/settings" element={<Settings />} />
+                        <Route path="/canva-return" element={<CanvaReturn />} />
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </main>

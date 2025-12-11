@@ -67,6 +67,24 @@ const canvaService = {
   getProjectDesign: async (projectId) => {
     const response = await api.get(`/canva/projects/${projectId}/design`);
     return response.data;
+  },
+
+  // Get active editing session
+  getActiveSession: async () => {
+    const response = await api.get('/canva/active-session');
+    return response.data;
+  },
+
+  // Auto-save active editing session
+  autoSaveSession: async () => {
+    const response = await api.post('/canva/active-session/save');
+    return response.data;
+  },
+
+  // Clear active editing session
+  clearSession: async () => {
+    const response = await api.delete('/canva/active-session');
+    return response.data;
   }
 };
 

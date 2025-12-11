@@ -12,6 +12,9 @@ const router = express.Router();
 // Store for PKCE code verifiers (in production, use Redis or similar)
 const codeVerifierStore = new Map();
 
+// Store for active Canva editing sessions (maps visitorId to session data)
+const activeEditSessions = new Map();
+
 // Helper function to provide hints for OAuth errors
 const getOAuthErrorHint = (error) => {
   const hints = {
@@ -91,8 +94,8 @@ router.get('/callback', async (req, res) => {
     // Handle return navigation from Canva editor (not OAuth)
     if (correlation_jwt && !code && !state) {
       logger.info('Canva return navigation received', { correlationJwt: correlation_jwt.substring(0, 20) + '...' });
-      // Redirect to the project page or settings - user finished editing
-      return res.redirect(`${process.env.CLIENT_URL}/projects?canva_return=true`);
+      // Redirect to the CanvaReturn page for auto-save handling
+      return res.redirect(`${process.env.CLIENT_URL}/canva-return`);
     }
 
     if (oauthError) {
@@ -309,6 +312,15 @@ router.post('/projects/:projectId/edit', authenticate, ensureCanvaToken, async (
     project.canvaDesignId = design.design?.id;
     await project.save();
 
+    // Store active edit session for auto-save on return
+    activeEditSessions.set(req.user._id.toString(), {
+      projectId: project._id.toString(),
+      designId: design.design?.id,
+      userId: req.user._id.toString(),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     logger.info('Canva edit session created', {
       projectId: project._id,
       designId: design.design?.id,
@@ -318,7 +330,8 @@ router.post('/projects/:projectId/edit', authenticate, ensureCanvaToken, async (
     res.json({
       editUrl: design.design?.urls?.edit_url,
       viewUrl: design.design?.urls?.view_url,
-      designId: design.design?.id
+      designId: design.design?.id,
+      projectId: project._id.toString()
     });
   } catch (error) {
     logger.logError(error, { context: 'canva.projectEdit', projectId: req.params.projectId, userId: req.user._id });
@@ -464,6 +477,15 @@ router.post('/projects/:projectId/create-new', authenticate, ensureCanvaToken, [
     project.canvaDesignId = design.design?.id;
     await project.save();
 
+    // Store active edit session for auto-save on return
+    activeEditSessions.set(req.user._id.toString(), {
+      projectId: project._id.toString(),
+      designId: design.design?.id,
+      userId: req.user._id.toString(),
+      createdAt: Date.now(),
+      expiresAt: Date.now() + 24 * 60 * 60 * 1000 // 24 hours
+    });
+
     logger.info('New Canva design created for project', {
       projectId: project._id,
       designId: design.design?.id,
@@ -473,7 +495,8 @@ router.post('/projects/:projectId/create-new', authenticate, ensureCanvaToken, [
     res.json({
       editUrl: design.design?.urls?.edit_url,
       viewUrl: design.design?.urls?.view_url,
-      designId: design.design?.id
+      designId: design.design?.id,
+      projectId: project._id.toString()
     });
   } catch (error) {
     logger.logError(error, { context: 'canva.projectCreateNew', projectId: req.params.projectId, userId: req.user._id });
@@ -498,6 +521,147 @@ router.get('/projects/:projectId/design', authenticate, ensureCanvaToken, async 
   } catch (error) {
     logger.logError(error, { context: 'canva.projectDesign', projectId: req.params.projectId, userId: req.user._id });
     res.status(500).json({ error: 'Error fetching project design' });
+  }
+});
+
+// GET /api/canva/active-session - Get current user's active editing session
+router.get('/active-session', authenticate, async (req, res) => {
+  try {
+    const session = activeEditSessions.get(req.user._id.toString());
+
+    if (!session || session.expiresAt < Date.now()) {
+      activeEditSessions.delete(req.user._id.toString());
+      return res.json({ session: null });
+    }
+
+    res.json({ session });
+  } catch (error) {
+    logger.logError(error, { context: 'canva.activeSession', userId: req.user._id });
+    res.status(500).json({ error: 'Error fetching active session' });
+  }
+});
+
+// POST /api/canva/active-session/save - Auto-save the active editing session
+router.post('/active-session/save', authenticate, ensureCanvaToken, async (req, res) => {
+  try {
+    const session = activeEditSessions.get(req.user._id.toString());
+
+    if (!session || session.expiresAt < Date.now()) {
+      activeEditSessions.delete(req.user._id.toString());
+      return res.status(404).json({ error: 'No active editing session found' });
+    }
+
+    const { projectId, designId } = session;
+
+    const project = await Project.findById(projectId);
+    if (!project) {
+      activeEditSessions.delete(req.user._id.toString());
+      return res.status(404).json({ error: 'Project not found' });
+    }
+
+    // Create export job
+    const exportResult = await canvaService.createExportJob(req.canvaToken, designId, 'png');
+
+    // Poll for export completion
+    const exportComplete = await canvaService.pollJobUntilComplete(
+      req.canvaToken,
+      exportResult.job.id,
+      canvaService.getExportJob
+    );
+
+    const exportUrl = exportComplete.job.urls?.[0];
+
+    if (!exportUrl) {
+      throw new Error('Export completed but no URL returned');
+    }
+
+    // Download the exported image
+    const imageResponse = await fetch(exportUrl);
+    if (!imageResponse.ok) {
+      throw new Error('Failed to download exported image');
+    }
+    const imageBuffer = Buffer.from(await imageResponse.arrayBuffer());
+
+    // Upload to S3
+    const { S3Client, PutObjectCommand } = require('@aws-sdk/client-s3');
+    const s3Client = new S3Client({
+      region: process.env.AWS_REGION,
+      credentials: {
+        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY
+      }
+    });
+
+    const key = `projects/${project._id}/canva-edited-${Date.now()}.png`;
+    await s3Client.send(new PutObjectCommand({
+      Bucket: process.env.AWS_S3_BUCKET,
+      Key: key,
+      Body: imageBuffer,
+      ContentType: 'image/png'
+    }));
+
+    const newImageUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+
+    // Save current image to history before replacing
+    if (project.imgDesign) {
+      if (!project.imageHistory) {
+        project.imageHistory = [];
+      }
+      project.imageHistory.unshift({
+        url: project.imgDesign,
+        source: project.canvaDesignId ? 'canva' : 'upload',
+        canvaDesignId: project.canvaDesignId || null,
+        createdAt: project.lastCanvaEdit || project.updatedAt,
+        createdBy: req.user._id
+      });
+      // Keep only last 10 versions
+      if (project.imageHistory.length > 10) {
+        const removedImages = project.imageHistory.splice(10);
+        for (const img of removedImages) {
+          const oldKey = getKeyFromUrl(img.url);
+          if (oldKey) {
+            deleteFromS3(oldKey).catch(err => {
+              logger.warn('Failed to delete old history image from S3', { key: oldKey });
+            });
+          }
+        }
+      }
+    }
+
+    // Update project with new image
+    project.imgDesign = newImageUrl;
+    project.canvaDesignId = designId;
+    project.lastCanvaEdit = new Date();
+    await project.save();
+
+    // Clear the active session
+    activeEditSessions.delete(req.user._id.toString());
+
+    logger.info('Auto-saved Canva design to project', {
+      projectId: project._id,
+      designId,
+      userId: req.user._id
+    });
+
+    res.json({
+      success: true,
+      projectId: project._id.toString(),
+      imageUrl: newImageUrl
+    });
+  } catch (error) {
+    logger.logError(error, { context: 'canva.autoSave', userId: req.user._id });
+    res.status(500).json({ error: 'Error auto-saving design' });
+  }
+});
+
+// DELETE /api/canva/active-session - Clear active editing session without saving
+router.delete('/active-session', authenticate, async (req, res) => {
+  try {
+    activeEditSessions.delete(req.user._id.toString());
+    res.json({ success: true });
+  } catch (error) {
+    logger.logError(error, { context: 'canva.clearSession', userId: req.user._id });
+    res.status(500).json({ error: 'Error clearing session' });
   }
 });
 
