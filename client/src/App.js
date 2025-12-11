@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import { CanvaProvider } from './context/CanvaContext';
 
 // Layout components
 import Navbar from './components/layout/Navbar';
@@ -23,6 +24,7 @@ import Stats from './pages/Stats';
 import Users from './pages/Users';
 import Feedback from './pages/Feedback';
 import Product from './pages/Product';
+import Settings from './pages/Settings';
 
 function App() {
   const { loading } = useAuth();
@@ -52,25 +54,28 @@ function App() {
           path="/*"
           element={
             <ProtectedRoute>
-              <Navbar />
-              <div className="container-fluid">
-                <div className="row">
-                  <main className="col-12 px-md-4 py-3 main-content">
-                    <Routes>
-                      <Route path="/" element={<Dashboard />} />
-                      <Route path="/projects" element={<Projects />} />
-                      <Route path="/project/:id" element={<ProjectDetail />} />
-                      <Route path="/create-project" element={<CreateProject />} />
-                      <Route path="/shelf" element={<Shelf />} />
-                      <Route path="/calendar" element={<Calendar />} />
-                      <Route path="/stats" element={<Stats />} />
-                      <Route path="/users" element={<Users />} />
-                      <Route path="/feedback" element={<Feedback />} />
-                      <Route path="*" element={<Navigate to="/" replace />} />
-                    </Routes>
-                  </main>
+              <CanvaProvider>
+                <Navbar />
+                <div className="container-fluid">
+                  <div className="row">
+                    <main className="col-12 px-md-4 py-3 main-content">
+                      <Routes>
+                        <Route path="/" element={<Dashboard />} />
+                        <Route path="/projects" element={<Projects />} />
+                        <Route path="/project/:id" element={<ProjectDetail />} />
+                        <Route path="/create-project" element={<CreateProject />} />
+                        <Route path="/shelf" element={<Shelf />} />
+                        <Route path="/calendar" element={<Calendar />} />
+                        <Route path="/stats" element={<Stats />} />
+                        <Route path="/users" element={<Users />} />
+                        <Route path="/feedback" element={<Feedback />} />
+                        <Route path="/settings" element={<Settings />} />
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </main>
+                  </div>
                 </div>
-              </div>
+              </CanvaProvider>
             </ProtectedRoute>
           }
         />

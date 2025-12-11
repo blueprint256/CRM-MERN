@@ -56,6 +56,23 @@ const userSchema = new mongoose.Schema({
   profilePicture: {
     type: String,
     default: null
+  },
+  // Canva integration fields
+  canvaAccessToken: {
+    type: String,
+    default: null
+  },
+  canvaRefreshToken: {
+    type: String,
+    default: null
+  },
+  canvaTokenExpiresAt: {
+    type: Date,
+    default: null
+  },
+  canvaUserId: {
+    type: String,
+    default: null
   }
 }, {
   timestamps: true
@@ -110,6 +127,8 @@ userSchema.set('toJSON', {
   virtuals: true,
   transform: function(doc, ret) {
     delete ret.passwordHash;
+    delete ret.canvaAccessToken;
+    delete ret.canvaRefreshToken;
     delete ret.__v;
     return ret;
   }

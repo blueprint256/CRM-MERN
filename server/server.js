@@ -17,6 +17,7 @@ const userRoutes = require('./routes/users');
 const projectRoutes = require('./routes/projects');
 const promptRoutes = require('./routes/prompts');
 const statsRoutes = require('./routes/stats');
+const canvaRoutes = require('./routes/canva');
 
 const app = express();
 
@@ -88,6 +89,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/prompts', promptRoutes);
 app.use('/api/stats', statsRoutes);
+app.use('/api/canva', canvaRoutes);
 
 // Request logging middleware
 app.use((req, res, next) => {

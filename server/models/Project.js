@@ -60,6 +60,15 @@ const projectSchema = new mongoose.Schema({
   },
   googleEventId: {
     type: String
+  },
+  // Canva integration fields
+  canvaDesignId: {
+    type: String,
+    default: null
+  },
+  lastCanvaEdit: {
+    type: Date,
+    default: null
   }
 }, {
   timestamps: true
