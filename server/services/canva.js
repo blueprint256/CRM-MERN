@@ -173,6 +173,19 @@ const refreshAccessToken = async (refreshToken) => {
 };
 
 /**
+ * Custom error class for Canva API errors
+ */
+class CanvaApiError extends Error {
+  constructor(message, code, status, endpoint) {
+    super(message);
+    this.name = 'CanvaApiError';
+    this.code = code;
+    this.status = status;
+    this.endpoint = endpoint;
+  }
+}
+
+/**
  * Make authenticated request to Canva API
  */
 const canvaApiRequest = async (endpoint, options = {}, accessToken) => {
@@ -194,7 +207,15 @@ const canvaApiRequest = async (endpoint, options = {}, accessToken) => {
       status: response.status,
       error: errorData
     });
-    throw new Error(errorData.message || `Canva API error: ${response.status}`);
+
+    // Create detailed error with code for frontend handling
+    const error = new CanvaApiError(
+      errorData.message || `Canva API error: ${response.status}`,
+      errorData.code || 'unknown_error',
+      response.status,
+      endpoint
+    );
+    throw error;
   }
 
   return response.json();
@@ -399,5 +420,6 @@ module.exports = {
   createExportJob,
   getExportJob,
   pollJobUntilComplete,
-  CANVA_SCOPES
+  CANVA_SCOPES,
+  CanvaApiError
 };

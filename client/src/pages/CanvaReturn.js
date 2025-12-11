@@ -7,6 +7,7 @@ const CanvaReturn = () => {
   const [searchParams] = useSearchParams();
   const [status, setStatus] = useState('checking'); // checking, saving, success, error, no_session
   const [error, setError] = useState(null);
+  const [errorDetails, setErrorDetails] = useState(null);
   const [projectId, setProjectId] = useState(null);
 
   useEffect(() => {
@@ -38,6 +39,7 @@ const CanvaReturn = () => {
       } catch (err) {
         console.error('Auto-save failed:', err);
         setError(err.response?.data?.error || 'Failed to save design');
+        setErrorDetails(err.response?.data?.details || null);
         setStatus('error');
       }
     };
@@ -49,6 +51,7 @@ const CanvaReturn = () => {
     if (retry) {
       setStatus('saving');
       setError(null);
+      setErrorDetails(null);
       try {
         const result = await canvaService.autoSaveSession();
         setStatus('success');
@@ -57,6 +60,7 @@ const CanvaReturn = () => {
         }, 1500);
       } catch (err) {
         setError(err.response?.data?.error || 'Failed to save design');
+        setErrorDetails(err.response?.data?.details || null);
         setStatus('error');
       }
     } else {
@@ -120,8 +124,28 @@ const CanvaReturn = () => {
               <div className="text-danger mb-4">
                 <i className="bi bi-exclamation-triangle-fill" style={{ fontSize: '4rem' }}></i>
               </div>
-              <h4 className="text-danger">Save Failed</h4>
-              <p className="text-muted">{error}</p>
+              <h4 className="text-danger">{errorDetails?.title || 'Save Failed'}</h4>
+
+              {errorDetails ? (
+                <div className="text-start mt-3">
+                  <p className="text-muted mb-2">{errorDetails.message}</p>
+                  <ul className="list-unstyled text-muted small">
+                    {errorDetails.steps?.map((step, index) => (
+                      <li key={index} className="mb-1">
+                        <i className="bi bi-dot me-1"></i>
+                        {step}
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="alert alert-info mt-3 small">
+                    <i className="bi bi-lightbulb me-2"></i>
+                    <strong>Solution:</strong> {errorDetails.action}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-muted">{error}</p>
+              )}
+
               <div className="d-flex gap-2 justify-content-center mt-4">
                 <button
                   className="btn btn-primary"
@@ -135,6 +159,13 @@ const CanvaReturn = () => {
                   onClick={() => handleRetryOrSkip(false)}
                 >
                   Skip & Go to Project
+                </button>
+                <button
+                  className="btn btn-outline-info"
+                  onClick={() => navigate('/settings')}
+                >
+                  <i className="bi bi-gear me-2"></i>
+                  Settings
                 </button>
               </div>
             </>

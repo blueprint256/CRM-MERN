@@ -650,9 +650,56 @@ router.post('/active-session/save', authenticate, ensureCanvaToken, async (req, 
     });
   } catch (error) {
     logger.logError(error, { context: 'canva.autoSave', userId: req.user._id });
+
+    // Provide specific error details for known Canva API errors
+    if (error.name === 'CanvaApiError') {
+      return res.status(error.status || 500).json({
+        error: error.message,
+        code: error.code,
+        details: getExportErrorGuidance(error.code)
+      });
+    }
+
     res.status(500).json({ error: 'Error auto-saving design' });
   }
 });
+
+// Helper function to provide guidance for export errors
+const getExportErrorGuidance = (code) => {
+  const guidance = {
+    'permission_denied': {
+      title: 'Design Access Denied',
+      message: 'Cannot export this design. This usually happens when:',
+      steps: [
+        'The design was not saved in Canva before returning',
+        'The design:content:read scope is not enabled in Canva Developer Portal',
+        'The OAuth tokens have expired - try disconnecting and reconnecting Canva'
+      ],
+      action: 'Please go back to Canva, make sure to click "Save" or "Done" before returning, then try again.'
+    },
+    'not_found': {
+      title: 'Design Not Found',
+      message: 'The design could not be found in Canva.',
+      steps: [
+        'The design may have been deleted',
+        'The design ID may be incorrect'
+      ],
+      action: 'Please create a new design and try again.'
+    },
+    'rate_limited': {
+      title: 'Too Many Requests',
+      message: 'Canva API rate limit exceeded.',
+      steps: ['Please wait a moment before trying again'],
+      action: 'Wait 30 seconds and retry.'
+    }
+  };
+  return guidance[code] || {
+    title: 'Export Error',
+    message: 'An error occurred while exporting the design.',
+    steps: ['Try refreshing your Canva connection in Settings'],
+    action: 'Disconnect and reconnect Canva, then try again.'
+  };
+};
 
 // DELETE /api/canva/active-session - Clear active editing session without saving
 router.delete('/active-session', authenticate, async (req, res) => {
