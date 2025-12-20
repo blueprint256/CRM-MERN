@@ -65,6 +65,43 @@ const Navbar = () => {
                 Stats
               </Link>
             </li>
+
+            {/* FPM Navigation */}
+            <li className="nav-item dropdown">
+              <a
+                className={`nav-link dropdown-toggle ${
+                  ['/campaigns', '/content-board', '/assets'].some(p => location.pathname.startsWith(p)) ? 'active' : ''
+                }`}
+                href="#"
+                id="fpmDropdown"
+                role="button"
+                data-bs-toggle="dropdown"
+              >
+                <i className="bi bi-megaphone me-1"></i>
+                Marketing
+              </a>
+              <ul className="dropdown-menu">
+                <li>
+                  <Link className="dropdown-item" to="/campaigns">
+                    <i className="bi bi-megaphone me-2"></i>
+                    Campaigns
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/content-board">
+                    <i className="bi bi-kanban me-2"></i>
+                    Content Board
+                  </Link>
+                </li>
+                <li>
+                  <Link className="dropdown-item" to="/assets">
+                    <i className="bi bi-collection me-2"></i>
+                    Asset Library
+                  </Link>
+                </li>
+              </ul>
+            </li>
+
             {user?.role === 'client' && (
               <li className="nav-item">
                 <Link className={`nav-link ${isActive('/feedback')}`} to="/feedback">

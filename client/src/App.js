@@ -27,6 +27,11 @@ import Product from './pages/Product';
 import Settings from './pages/Settings';
 import CanvaReturn from './pages/CanvaReturn';
 
+// FPM Pages
+import AssetLibrary from './pages/AssetLibrary';
+import ContentBoard from './pages/ContentBoard';
+import Campaigns from './pages/Campaigns';
+
 function App() {
   const { loading } = useAuth();
 
@@ -72,6 +77,12 @@ function App() {
                         <Route path="/feedback" element={<Feedback />} />
                         <Route path="/settings" element={<Settings />} />
                         <Route path="/canva-return" element={<CanvaReturn />} />
+
+                        {/* FPM Routes */}
+                        <Route path="/assets" element={<AssetLibrary />} />
+                        <Route path="/content-board" element={<ContentBoard />} />
+                        <Route path="/campaigns" element={<Campaigns />} />
+
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>
                     </main>
