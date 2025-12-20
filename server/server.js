@@ -18,6 +18,12 @@ const projectRoutes = require('./routes/projects');
 const promptRoutes = require('./routes/prompts');
 const statsRoutes = require('./routes/stats');
 const canvaRoutes = require('./routes/canva');
+// FPM - File and Project Management routes
+const assetRoutes = require('./routes/assets');
+const folderRoutes = require('./routes/folders');
+const labelRoutes = require('./routes/labels');
+const campaignRoutes = require('./routes/campaigns');
+const contentRoutes = require('./routes/content');
 
 const app = express();
 
@@ -90,6 +96,13 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/prompts', promptRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/canva', canvaRoutes);
+
+// FPM - File and Project Management
+app.use('/api/assets', assetRoutes);
+app.use('/api/folders', folderRoutes);
+app.use('/api/labels', labelRoutes);
+app.use('/api/campaigns', campaignRoutes);
+app.use('/api/content', contentRoutes);
 
 // Request logging middleware
 app.use((req, res, next) => {
