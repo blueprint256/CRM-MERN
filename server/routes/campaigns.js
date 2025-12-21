@@ -37,7 +37,16 @@ router.get('/', authenticate, async (req, res) => {
       limit: parseInt(limit)
     });
 
-    res.json(result);
+    // Format response to match frontend expectations
+    res.json({
+      campaigns: result.campaigns,
+      pagination: {
+        page: result.page,
+        pages: result.totalPages,
+        total: result.total,
+        limit: parseInt(limit)
+      }
+    });
   } catch (error) {
     logger.logError(error, { context: 'campaigns.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching campaigns' });
@@ -49,6 +58,7 @@ router.get('/stats', authenticate, async (req, res) => {
   try {
     const userId = req.user._id;
 
+    // Get campaign stats by status
     const stats = await Campaign.aggregate([
       {
         $match: {
@@ -62,20 +72,33 @@ router.get('/stats', authenticate, async (req, res) => {
       {
         $group: {
           _id: '$status',
-          count: { $sum: 1 }
+          count: { $sum: 1 },
+          totalContent: { $sum: '$contentCounts.total' }
         }
       }
     ]);
 
-    const statusCounts = {};
-    stats.forEach(s => { statusCounts[s._id] = s.count; });
+    // Build response in format frontend expects
+    const result = {
+      active: 0,
+      completed: 0,
+      planning: 0,
+      paused: 0,
+      draft: 0,
+      archived: 0,
+      totalContent: 0,
+      total: 0
+    };
 
-    res.json({
-      stats: {
-        total: stats.reduce((sum, s) => sum + s.count, 0),
-        byStatus: statusCounts
+    stats.forEach(s => {
+      if (s._id) {
+        result[s._id] = s.count;
+        result.totalContent += s.totalContent || 0;
       }
+      result.total += s.count;
     });
+
+    res.json(result);
   } catch (error) {
     logger.logError(error, { context: 'campaigns.stats' });
     res.status(500).json({ error: 'Error fetching campaign stats' });

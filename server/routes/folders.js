@@ -7,7 +7,7 @@ const logger = require('../utils/logger');
 
 const router = express.Router();
 
-// GET /api/folders - Get all folders (tree structure)
+// GET /api/folders - Get all folders (tree structure or flat)
 router.get('/', authenticate, async (req, res) => {
   try {
     const { flat, parentId } = req.query;
@@ -41,7 +41,8 @@ router.get('/', authenticate, async (req, res) => {
     };
 
     const tree = buildTree(folders);
-    res.json({ folders: tree });
+    // Return array directly to match frontend expectations
+    res.json(tree);
   } catch (error) {
     logger.logError(error, { context: 'folders.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching folders' });

@@ -137,11 +137,11 @@ const versionSchema = new mongoose.Schema({
 
 // Main Content schema
 const contentSchema = new mongoose.Schema({
-  // === WORKSPACE REFERENCE (Required) ===
+  // === WORKSPACE REFERENCE (Optional - for multi-workspace support) ===
   workspace: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Workspace',
-    required: true,
+    default: null,
     index: true
   },
 

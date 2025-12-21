@@ -77,17 +77,19 @@ passport.use('local', new LocalStrategy(
 ));
 
 // Google OAuth2 Strategy using passport-oauth2
-passport.use('google', new OAuth2Strategy(
-  {
-    authorizationURL: 'https://accounts.google.com/o/oauth2/v2/auth',
-    tokenURL: 'https://oauth2.googleapis.com/token',
-    clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-    callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
-    scope: ['profile', 'email'],
-    passReqToCallback: true
-  },
-  async (req, accessToken, refreshToken, params, profile, done) => {
+// Only initialize if credentials are available
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use('google', new OAuth2Strategy(
+    {
+      authorizationURL: 'https://accounts.google.com/o/oauth2/v2/auth',
+      tokenURL: 'https://oauth2.googleapis.com/token',
+      clientID: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      callbackURL: process.env.GOOGLE_CALLBACK_URL || '/api/auth/google/callback',
+      scope: ['profile', 'email'],
+      passReqToCallback: true
+    },
+    async (req, accessToken, refreshToken, params, profile, done) => {
     try {
       logger.debug('OAuth2 callback received', { hasAccessToken: !!accessToken });
 
@@ -222,7 +224,10 @@ passport.use('google', new OAuth2Strategy(
       return done(error, null);
     }
   }
-));
+  ));
+} else {
+  logger.warn('Google OAuth not configured - GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET missing');
+}
 
 // Custom error handler for passport
 passport.handleError = (error, req, res) => {

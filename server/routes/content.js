@@ -81,16 +81,25 @@ router.get('/', authenticate, async (req, res) => {
 // GET /api/content/board - Get content grouped by stage (Kanban view)
 router.get('/board', authenticate, async (req, res) => {
   try {
-    const { campaignId, platforms } = req.query;
+    // Accept both 'campaign' (from frontend) and 'campaignId' for compatibility
+    const { campaign, campaignId, platform, platforms } = req.query;
 
-    const options = { campaignId };
-    if (platforms) {
-      options.stages = platforms.split(',');
+    const options = {
+      campaignId: campaign || campaignId
+    };
+
+    // Handle platform filter (frontend sends 'platform', also support 'platforms')
+    const platformFilter = platform || platforms;
+    if (platformFilter) {
+      // Note: This was incorrectly being used as stages filter
+      // Keep for backward compatibility but the model doesn't filter by platform in getByStage
+      options.platforms = platformFilter.split ? platformFilter.split(',') : [platformFilter];
     }
 
     const grouped = await Content.getByStage(req.user._id, options);
 
-    res.json({ board: grouped });
+    // Return directly (not wrapped) to match frontend expectations
+    res.json(grouped);
   } catch (error) {
     logger.logError(error, { context: 'content.board', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching content board' });

@@ -9,16 +9,26 @@ const router = express.Router();
 // GET /api/labels - Get all labels (global + user's custom)
 router.get('/', authenticate, async (req, res) => {
   try {
-    const labels = await Label.find({
+    const { appliesTo } = req.query;
+
+    const query = {
       $or: [
         { isGlobal: true },
         { createdBy: req.user._id }
       ]
-    })
+    };
+
+    // Filter by appliesTo if specified
+    if (appliesTo) {
+      query.appliesTo = appliesTo;
+    }
+
+    const labels = await Label.find(query)
       .populate('createdBy', 'firstName lastName')
       .sort({ type: 1, name: 1 });
 
-    res.json({ labels });
+    // Return array directly to match frontend expectations
+    res.json(labels);
   } catch (error) {
     logger.logError(error, { context: 'labels.getAll', userId: req.user._id });
     res.status(500).json({ error: 'Error fetching labels' });

@@ -6,11 +6,11 @@ const mongoose = require('mongoose');
  * A campaign represents a marketing initiative with multiple content pieces
  */
 const campaignSchema = new mongoose.Schema({
-  // === WORKSPACE REFERENCE (Required) ===
+  // === WORKSPACE REFERENCE (Optional - for multi-workspace support) ===
   workspace: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Workspace',
-    required: true,
+    default: null,
     index: true
   },
 
