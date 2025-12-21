@@ -31,6 +31,7 @@ import CanvaReturn from './pages/CanvaReturn';
 import AssetLibrary from './pages/AssetLibrary';
 import ContentBoard from './pages/ContentBoard';
 import Campaigns from './pages/Campaigns';
+import Inbox from './pages/Inbox';
 
 function App() {
   const { loading } = useAuth();
@@ -79,9 +80,11 @@ function App() {
                         <Route path="/canva-return" element={<CanvaReturn />} />
 
                         {/* FPM Routes */}
+                        <Route path="/inbox" element={<Inbox />} />
                         <Route path="/assets" element={<AssetLibrary />} />
                         <Route path="/content-board" element={<ContentBoard />} />
                         <Route path="/campaigns" element={<Campaigns />} />
+                        <Route path="/content-calendar" element={<Calendar />} />
 
                         <Route path="*" element={<Navigate to="/" replace />} />
                       </Routes>

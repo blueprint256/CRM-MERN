@@ -28,6 +28,8 @@ const contentRoutes = require('./routes/content');
 // Workspace and Team routes
 const workspaceRoutes = require('./routes/workspaces');
 const teamRoutes = require('./routes/teams');
+// Task Management routes
+const taskRoutes = require('./routes/tasks');
 
 const app = express();
 
@@ -110,6 +112,8 @@ app.use('/api/content', contentRoutes);
 // Workspace and Team Management
 app.use('/api/workspaces', workspaceRoutes);
 app.use('/api/teams', teamRoutes);
+// Task Management
+app.use('/api/tasks', taskRoutes);
 
 // Request logging middleware
 app.use((req, res, next) => {
