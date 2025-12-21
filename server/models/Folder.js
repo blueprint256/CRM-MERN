@@ -5,6 +5,14 @@ const mongoose = require('mongoose');
  * Supports nested folders with full path tracking
  */
 const folderSchema = new mongoose.Schema({
+  // === WORKSPACE REFERENCE (Required) ===
+  workspace: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    required: true,
+    index: true
+  },
+
   name: {
     type: String,
     required: true,

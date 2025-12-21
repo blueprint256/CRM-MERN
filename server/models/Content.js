@@ -137,6 +137,14 @@ const versionSchema = new mongoose.Schema({
 
 // Main Content schema
 const contentSchema = new mongoose.Schema({
+  // === WORKSPACE REFERENCE (Required) ===
+  workspace: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    required: true,
+    index: true
+  },
+
   // Core identification
   title: {
     type: String,

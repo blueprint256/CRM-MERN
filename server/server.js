@@ -24,6 +24,9 @@ const folderRoutes = require('./routes/folders');
 const labelRoutes = require('./routes/labels');
 const campaignRoutes = require('./routes/campaigns');
 const contentRoutes = require('./routes/content');
+// Workspace and Team routes
+const workspaceRoutes = require('./routes/workspaces');
+const teamRoutes = require('./routes/teams');
 
 const app = express();
 
@@ -103,6 +106,9 @@ app.use('/api/folders', folderRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/campaigns', campaignRoutes);
 app.use('/api/content', contentRoutes);
+// Workspace and Team Management
+app.use('/api/workspaces', workspaceRoutes);
+app.use('/api/teams', teamRoutes);
 
 // Request logging middleware
 app.use((req, res, next) => {

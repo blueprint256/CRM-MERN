@@ -6,6 +6,14 @@ const mongoose = require('mongoose');
  * Supports versioning, metadata, and usage tracking
  */
 const assetSchema = new mongoose.Schema({
+  // === WORKSPACE REFERENCE (Required) ===
+  workspace: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    required: true,
+    index: true
+  },
+
   // File information
   filename: {
     type: String,

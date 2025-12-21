@@ -6,6 +6,13 @@ const mongoose = require('mongoose');
  * Supports both system-defined and user-created labels
  */
 const labelSchema = new mongoose.Schema({
+  // === WORKSPACE REFERENCE (Required for custom labels) ===
+  workspace: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Workspace',
+    index: true
+  },
+
   name: {
     type: String,
     required: true,
