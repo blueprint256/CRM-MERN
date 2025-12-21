@@ -131,71 +131,74 @@ const teamSchema = new mongoose.Schema({
 
   // === SETTINGS ===
   settings: {
-    // Default permissions for new members by role
+    // Default permissions for new members by role (stored as Mixed type)
     defaultPermissions: {
-      client: {
-        canCreateContent: false,
-        canEditContent: false,
-        canDeleteContent: false,
-        canPublishContent: false,
-        canApproveContent: true,
-        canUploadAssets: false,
-        canDeleteAssets: false,
-        canCreateCampaign: false,
-        canEditCampaign: false,
-        canDeleteCampaign: false,
-        canInviteMembers: false,
-        canRemoveMembers: false,
-        canChangeRoles: false,
-        canEditSettings: false
-      },
-      designer: {
-        canCreateContent: true,
-        canEditContent: true,
-        canDeleteContent: false,
-        canPublishContent: false,
-        canApproveContent: false,
-        canUploadAssets: true,
-        canDeleteAssets: true,
-        canCreateCampaign: false,
-        canEditCampaign: true,
-        canDeleteCampaign: false,
-        canInviteMembers: false,
-        canRemoveMembers: false,
-        canChangeRoles: false,
-        canEditSettings: false
-      },
-      marketeer: {
-        canCreateContent: true,
-        canEditContent: true,
-        canDeleteContent: true,
-        canPublishContent: true,
-        canApproveContent: false,
-        canUploadAssets: true,
-        canDeleteAssets: true,
-        canCreateCampaign: true,
-        canEditCampaign: true,
-        canDeleteCampaign: false,
-        canInviteMembers: true,
-        canRemoveMembers: false,
-        canChangeRoles: false,
-        canEditSettings: false
-      },
-      manager: {
-        canCreateContent: true,
-        canEditContent: true,
-        canDeleteContent: true,
-        canPublishContent: true,
-        canApproveContent: true,
-        canUploadAssets: true,
-        canDeleteAssets: true,
-        canCreateCampaign: true,
-        canEditCampaign: true,
-        canDeleteCampaign: true,
-        canInviteMembers: true,
-        canRemoveMembers: true,
-        canChangeRoles: true,
-        canEditSettings: true
+      type: mongoose.Schema.Types.Mixed,
+      default: {
+        client: {
+          canCreateContent: false,
+          canEditContent: false,
+          canDeleteContent: false,
+          canPublishContent: false,
+          canApproveContent: true,
+          canUploadAssets: false,
+          canDeleteAssets: false,
+          canCreateCampaign: false,
+          canEditCampaign: false,
+          canDeleteCampaign: false,
+          canInviteMembers: false,
+          canRemoveMembers: false,
+          canChangeRoles: false,
+          canEditSettings: false
+        },
+        designer: {
+          canCreateContent: true,
+          canEditContent: true,
+          canDeleteContent: false,
+          canPublishContent: false,
+          canApproveContent: false,
+          canUploadAssets: true,
+          canDeleteAssets: true,
+          canCreateCampaign: false,
+          canEditCampaign: true,
+          canDeleteCampaign: false,
+          canInviteMembers: false,
+          canRemoveMembers: false,
+          canChangeRoles: false,
+          canEditSettings: false
+        },
+        marketeer: {
+          canCreateContent: true,
+          canEditContent: true,
+          canDeleteContent: true,
+          canPublishContent: true,
+          canApproveContent: false,
+          canUploadAssets: true,
+          canDeleteAssets: true,
+          canCreateCampaign: true,
+          canEditCampaign: true,
+          canDeleteCampaign: false,
+          canInviteMembers: true,
+          canRemoveMembers: false,
+          canChangeRoles: false,
+          canEditSettings: false
+        },
+        manager: {
+          canCreateContent: true,
+          canEditContent: true,
+          canDeleteContent: true,
+          canPublishContent: true,
+          canApproveContent: true,
+          canUploadAssets: true,
+          canDeleteAssets: true,
+          canCreateCampaign: true,
+          canEditCampaign: true,
+          canDeleteCampaign: true,
+          canInviteMembers: true,
+          canRemoveMembers: true,
+          canChangeRoles: true,
+          canEditSettings: true
+        }
       }
     },
     // Notification preferences
